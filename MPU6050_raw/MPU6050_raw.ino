@@ -53,8 +53,8 @@ int16_t ax, ay, az;
 int16_t gx, gy, gz;
 int16_t ax0, ay0,az0;
 int16_t gx0, gy0,gz0;
-int32_t Iax, Iay, Iaz;
-int32_t Igx, Igy, Igz;
+int16_t Iax, Iay, Iaz;
+int16_t Igx, Igy, Igz;
 long lastMillis;
 
 #define dirA 12
@@ -66,7 +66,7 @@ long lastMillis;
 #define currA A0
 #define currB A1
 
-#define KP 5
+#define KP 0.3
 #define KD 20
 #define KI 3
 
@@ -78,13 +78,13 @@ void setup() {
     Igx = 0;
     Igy = 0;
     Igz = 0;
-     pinMode(dirA, OUTPUT);
-  pinMode(dirB, OUTPUT);
-  pinMode(speedA, OUTPUT);
-  pinMode(speedB, OUTPUT);
+    pinMode(dirA, OUTPUT);
+    pinMode(dirB, OUTPUT);
+    pinMode(speedA, OUTPUT);
+    pinMode(speedB, OUTPUT);
     pinMode(brakeA, OUTPUT);
-  pinMode(brakeB, OUTPUT);
-  digitalWrite(brakeA,LOW);
+    pinMode(brakeB, OUTPUT);
+    digitalWrite(brakeA,LOW);
     digitalWrite(brakeB,LOW);
     // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -96,7 +96,7 @@ void setup() {
     // initialize serial communication
     // (38400 chosen because it works as well at 8MHz as it does at 16MHz, but
     // it's really up to you depending on your project)
-    Serial.begin(38400);
+    Serial.begin(19200);
     
     // initialize device
     Serial.println("Initializing I2C devices...");
@@ -151,16 +151,22 @@ void loop() {
     gx-=gx0;
     gy-=gy0;
     gz-=gz0;
-    Iax += ax*(currMillis-lastMillis);
-    Iay += ay*(currMillis-lastMillis);
-    Iaz += az*(currMillis-lastMillis);
-    Igx += gx*(currMillis-lastMillis);
-    Igy += gy*(currMillis-lastMillis);
-    Igz += gz*(currMillis-lastMillis);
-    digitalWrite(dirA, LOW);
-    digitalWrite(dirB, HIGH);
-    analogWrite(speedA, abs(KP*Igx));
-    analogWrite(speedB, abs(KP*Igx));
+    Iax += ax*(currMillis-lastMillis) / 1000;
+    Iay += ay*(currMillis-lastMillis) / 1000;
+    Iaz += az*(currMillis-lastMillis) / 1000;
+    Igx += gx*(currMillis-lastMillis) / 1000;
+    Igy += gy*(currMillis-lastMillis) / 1000;
+    Igz += gz*(currMillis-lastMillis) / 1000;
+    if(Igx > 0){
+      digitalWrite(dirA, LOW);
+      digitalWrite(dirB, HIGH); 
+    }
+    else{
+      digitalWrite(dirA, HIGH);
+      digitalWrite(dirB, LOW);    
+    }
+    analogWrite(speedA, min(abs(KP*(double)Igx), 255));
+    analogWrite(speedB, min(abs(KP*(double)Igx), 255));
     // these methods (and a few others) are also available
     //accelgyro.getAcceleration(&ax, &ay, &az);
     //accelgyro.getRotation(&gx, &gy, &gz);
@@ -168,18 +174,18 @@ void loop() {
 
         // display tab-separated accel/gyro x/y/z values
 //        Serial.print("a/g:\t");
-        Serial.print(ax); Serial.print(",");
+        /*Serial.print(ax); Serial.print(",");
         Serial.print(ay); Serial.print(",");
-        Serial.print(az); Serial.print(",");
+        Serial.print(az); Serial.print(",");*/
         Serial.print(gx); Serial.print(",");
-        Serial.print(gy); Serial.print(",");
-        Serial.print(gz); Serial.print(",");
-        Serial.print(Iax); Serial.print(",");
+/*        Serial.print(gy); Serial.print(",");
+        Serial.print(gz); Serial.print(","); 
+        /*Serial.print(Iax); Serial.print(",");
         Serial.print(Iay); Serial.print(",");
-        Serial.print(Iaz); Serial.print(",");
-        Serial.print(Igx); Serial.print(",");
-        Serial.print(Igy); Serial.print(",");
-        Serial.println(Igz);
+        Serial.print(Iaz); Serial.print(","); */
+        Serial.println(Igx); //Serial.print(",");
+/*        Serial.print(Igy); Serial.print(",");
+        Serial.println(Igz);*/
 
     #ifdef OUTPUT_BINARY_ACCELGYRO
         Serial.write((uint8_t)(ax >> 8)); Serial.write((uint8_t)(ax & 0xFF));
